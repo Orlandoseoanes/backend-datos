@@ -19,3 +19,10 @@ venv\Scripts\activate
 ```
 pip install -r requeriments.txt
 ```
+
+## Ambiente en Docker
+Si desea correr el ambiente en un contenedor de docker puede utilizar el docker compose 
+```
+docker compose up --build
+```
+Esto para que te cree una imagen en un contenedor de docker por si te quieres saltar los pasos anteriormente nombrados
