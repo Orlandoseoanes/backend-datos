@@ -1,27 +1,34 @@
-FROM openjdk:21-slim-bookworm
+FROM jupyter/pyspark-notebook:latest
 
-# Instalar Python y venv
-RUN apt-get update && apt-get install -y python3 python3-pip python3-venv
+USER root
 
-WORKDIR /app
+# Instalar dependencias adicionales
+RUN apt-get update && apt-get install -y \
+    python3-venv \
+    gcc \
+    libc6-dev
 
-# Crear un entorno virtual
+# Crear y activar entorno virtual
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Instalar dependencias de Python en el entorno virtual
+WORKDIR /app
+
+# Copiar y instalar requisitos
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la aplicación
 COPY . .
 
-# Configurar variables de entorno para Java y PySpark
-ENV JAVA_HOME=/usr/local/openjdk-21
-ENV PATH=$PATH:$JAVA_HOME/bin
+# Configurar variables de entorno para PySpark
 ENV PYSPARK_PYTHON=$VIRTUAL_ENV/bin/python
 ENV PYSPARK_DRIVER_PYTHON=$VIRTUAL_ENV/bin/python
+ENV PYSPARK_SUBMIT_ARGS="--master local[*] pyspark-shell"
+
+# Asegurarse de que los scripts tengan permisos de ejecución
+RUN chmod +x /app/*.py
 
 # Comando para ejecutar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

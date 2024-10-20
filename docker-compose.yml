@@ -1,5 +1,4 @@
-version: '3.8'
-
+version: '3'
 services:
   web:
     build: .
@@ -8,9 +7,4 @@ services:
     volumes:
       - .:/app
     environment:
-      - PYTHONUNBUFFERED=1
-      - JAVA_HOME=/usr/local/openjdk-21
-      - PATH=/usr/local/openjdk-21/bin:/opt/venv/bin:$PATH
-      - PYSPARK_PYTHON=/opt/venv/bin/python
-      - PYSPARK_DRIVER_PYTHON=/opt/venv/bin/python
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      - PYSPARK_SUBMIT_ARGS=--master local[*] pyspark-shell
