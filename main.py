@@ -1,9 +1,11 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from controllers import  CSVcontroller
-import python_multipart
+from fastapi import FastAPI
+from controllers import CSVcontroller
 
 app = FastAPI()
 
+# Cambia esta línea
+app.include_router(CSVcontroller.router)
 
-app.include_router(CSVcontroller.router,prefix="/loadfile",tags=["loadfile"])
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
