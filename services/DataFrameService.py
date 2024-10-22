@@ -1,4 +1,4 @@
-from entitys.general import materias_periodos,semestres,Ciclos
+from entitys.general import materias_periodos,semestres,Ciclos,Areas
 from openpyxl import load_workbook
 import os
 from typing import List, Union
@@ -17,84 +17,104 @@ def process_excel_file(file_location: str):
             std = workbook[sheet_name]
             workbook.remove(std)
 
-    # Insertar dos nuevas columnas en la posición 1 (Columna A y B)
-    sheet.insert_cols(1)  # Para "Semestre"
-    sheet.insert_cols(1)  # Para "CICLO"
+    # Insertar tres nuevas columnas al inicio
+    sheet.insert_cols(1, 3)
 
-    # Agregar las nuevas columnas "Semestre" y "CICLO" en la fila 3
-    sheet.cell(row=3, column=1, value="CICLO")  # Columna A
-    sheet.cell(row=3, column=2, value="Semestre")  # Columna B
+    # Agregar los encabezados en la fila 3
+    sheet.cell(row=3, column=1, value="Ciclo")
+    sheet.cell(row=3, column=2, value="Semestre")
+    sheet.cell(row=3, column=3, value="Area")
 
-    # Llenar las columnas "Semestre" y "CICLO"
+    # Llenar las columnas
     for row in range(4, sheet.max_row + 1):
-        asignatura = sheet.cell(row=row, column=3).value
-        semestre_found = False
-        ciclo_found = False
+        asignatura = sheet.cell(row=row, column=4).value  # La columna de asignaturas ahora es la 4
+        if asignatura is None:
+            continue
 
+        # Inicializar variables de control
+        ciclo_found = False
+        semestre_found = False
+        areas_found = False
+
+        # Limpiar el nombre de la asignatura
+        asignatura = str(asignatura).strip()
+
+        # Buscar y asignar el ciclo
         for ciclo, asignaturas in Ciclos.items():
             if asignatura in asignaturas:
                 sheet.cell(row=row, column=1, value=ciclo)
                 ciclo_found = True
                 break
-
         if not ciclo_found:
             sheet.cell(row=row, column=1, value="N/A")
 
+        # Buscar y asignar el semestre
         for semestre, asignaturas in materias_periodos.items():
             if asignatura in asignaturas:
                 sheet.cell(row=row, column=2, value=semestre)
                 semestre_found = True
                 break
-
         if not semestre_found:
             sheet.cell(row=row, column=2, value="N/A")
 
+        # Buscar y asignar el área
+        for area, asignaturas in Areas.items():
+            if asignatura in asignaturas:
+                sheet.cell(row=row, column=3, value=area)
+                areas_found = True
+                break
+        if not areas_found:
+            sheet.cell(row=row, column=3, value="N/A")
+
     # Modificar la fila 3 con los valores del vector semestre
-    for col_index, semestre in enumerate(semestres, start=4):
+    for col_index, semestre in enumerate(semestres, start=5):
         sheet.cell(row=3, column=col_index, value=semestre)
 
     # Guardar el archivo modificado
     workbook.save(file_location)
 
-    # Convertir el archivo Excel a CSV con formato correcto para los ceros
+    # Convertir a CSV con formato específico
     csv_file_location = file_location.replace('.xlsx', '.csv')
-
+    
     with open(csv_file_location, mode='w', newline='', encoding='utf-8') as csv_file:
-        writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(csv_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         
         for row_idx, row in enumerate(sheet.iter_rows(values_only=True)):
             formatted_row = []
             for col_idx, cell in enumerate(row, start=1):
-                # Para las columnas 4-18 (datos numéricos)
-                if col_idx >= 4 and col_idx <= 18 and row_idx >= 3:  # Empezamos desde la fila 4 (índice 3)
-                    if isinstance(cell, (int, float)):
-                        # Multiplicar por 100 y redondear a 3 decimales
-                        value = cell * 100 if abs(cell) >= 1e-10 else 0
-                        formatted_value = round(value, 3)
-                    else:
-                        # Si no es número, intentar convertir
-                        try:
-                            if cell and str(cell).strip() != '':
-                                value = float(str(cell).replace('%', '')) * 100
-                                formatted_value = round(value, 3)
+                # Manejar valores numéricos
+                if col_idx >= 5 and row_idx >= 3:  # Datos numéricos desde la columna 4
+                    try:
+                        if cell is None or (isinstance(cell, str) and cell.strip() == ''):
+                            formatted_value = '0'
+                        elif isinstance(cell, (int, float)):
+                            # Convertir a porcentaje y redondear a 3 decimales
+                            value = float(cell)
+                            if abs(value) < 1e-10:
+                                formatted_value = '0'
                             else:
-                                formatted_value = 0
-                        except (ValueError, TypeError):
-                            formatted_value = cell
+                                formatted_value = f"{value * 100:.3f}"
+                        else:
+                            # Intentar convertir strings que puedan ser números
+                            value = float(str(cell).replace('%', '').strip())
+                            formatted_value = f"{value:.3f}"
+                    except (ValueError, TypeError):
+                        formatted_value = '0'
                 else:
-                    # Para las otras columnas (no numéricas)
-                    if isinstance(cell, (int, float)) and abs(cell) < 1e-10:
-                        formatted_value = 0
-                    else:
-                        formatted_value = cell
-                        
+                    # Valores no numéricos
+                    formatted_value = str(cell) if cell is not None else ''
+                
                 formatted_row.append(formatted_value)
-            writer.writerow(formatted_row)
+            
+            # Escribir la fila solo si tiene contenido
+            if any(cell.strip() != '' for cell in formatted_row):
+                writer.writerow(formatted_row)
     
-    # Borrar el archivo .xlsx original
+    # Borrar el archivo Excel original
     os.remove(file_location)
 
     return csv_file_location
+
 
 
 def get_ciclo(asignatura: str):
@@ -120,55 +140,83 @@ def get_asignaturas_por_semestre(semestre: str):
 
 
 def get_data(materia: str, fecha_inicial: str, fecha_final: str, file_path: str) -> dict:
-        try:
-           
+    try:
+        # Validar fechas
+        if fecha_inicial not in semestres or fecha_final not in semestres:
+            raise ValueError("Las fechas deben estar en el rango permitido")
+        
+        if semestres.index(fecha_inicial) > semestres.index(fecha_final):
+            raise ValueError("La fecha inicial debe ser anterior a la fecha final")
+        
+        # Leer el archivo CSV
+        with open(file_path, 'r', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
             
-            # Validar fechas
-            if fecha_inicial not in semestres or fecha_final not in semestres:
-                raise ValueError("Las fechas deben estar en el rango permitido")
+            # Saltar las dos primeras líneas de encabezado
+            next(csv_reader)  # Saltar "EVOLUCION ASIGNATURAS CON MAYOR TASA DE MORTALIDAD"
+            next(csv_reader)  # Saltar "INGENIERIA DE SISTEMAS"
             
-            if semestres.index(fecha_inicial) > semestres.index(fecha_final):
-                raise ValueError("La fecha inicial debe ser anterior a la fecha final")
+            # Leer la línea de encabezados (tercera línea)
+            headers = next(csv_reader)
             
-            # Índices para el rango de fechas
-            inicio_idx = semestres.index(fecha_inicial) + 3  # +3 porque tenemos CICLO, Semestre, ASIGNATURA
-            final_idx = semestres.index(fecha_final) + 3
+            # Encontrar los índices de las columnas para el rango de fechas
+            fechas_indices = []
+            for i, header in enumerate(headers):
+                if header in semestres:
+                    if fecha_inicial <= header <= fecha_final:
+                        fechas_indices.append(i)
             
-            # Leer el archivo CSV
-            with open(file_path, 'r', encoding='utf-8') as file:
-                csv_reader = csv.reader(file)
-                # Leer la primera fila para obtener los encabezados
-                headers = next(csv_reader)
+            if not fechas_indices:
+                raise ValueError("No se encontraron las fechas especificadas en el archivo")
+            
+            # Buscar la materia en el archivo
+            for row in csv_reader:
+                if len(row) < 3:  # Saltar filas vacías o mal formadas
+                    continue
+                    
+                # La materia puede estar en diferentes posiciones según el formato
+                asignatura_actual = None
+                ciclo = row[0].strip()
+                area = row[2].strip() if len(row) > 2 else ""
                 
-                # Buscar la materia línea por línea
-                for row in csv_reader:
-                    if row[2] == materia:  # La asignatura está en la columna 3 (índice 2)
-                        # Extraer los datos del rango solicitado
-                        datos_rango = []
-                        for i in range(inicio_idx, final_idx + 1):
-                            try:
-                                # Convertir el valor a float, manejando casos especiales
-                                valor = row[i].strip()
+                # Extraer la asignatura del formato del archivo
+                for campo in row:
+                    if materia in campo:
+                        asignatura_actual = materia
+                        break
+                
+                if asignatura_actual == materia:
+                    # Extraer los datos del rango solicitado
+                    datos_rango = []
+                    for idx in fechas_indices:
+                        try:
+                            if idx < len(row):
+                                valor = row[idx].strip()
                                 if valor == '' or valor == 'None':
                                     datos_rango.append(0.0)
                                 else:
-                                    # Eliminar el símbolo de porcentaje si existe
+                                    # Eliminar el símbolo de porcentaje si existe y convertir a float
                                     valor = valor.replace('%', '').strip()
                                     datos_rango.append(float(valor))
-                            except (ValueError, IndexError):
+                            else:
                                 datos_rango.append(0.0)
-                        
-                        # Construir respuesta con toda la información de la materia
-                        return {
-                            "ciclo": row[0],
-                            "semestre": row[1],
-                            "materia": row[2],
-                            "fechas": semestres[semestres.index(fecha_inicial):semestres.index(fecha_final) + 1],
-                            "datos": datos_rango
-                        }
-                
-                # Si no se encuentra la materia
-                raise ValueError(f"No se encontró la asignatura: {materia}")
+                        except (ValueError, IndexError):
+                            datos_rango.append(0.0)
+                    
+                    # Construir la respuesta
+                    fechas_rango = [headers[i] for i in fechas_indices]
+                    return {
+                        "ciclo": ciclo,
+                        "semestre": row[1] if len(row) > 1 else "semestre-desconocido",
+                        "area": area,
+                        "materia": materia,
+                        "fechas": fechas_rango,
+                        "datos": datos_rango
+                    }
             
-        except Exception as e:
-            raise ValueError(f"Error al procesar los datos: {str(e)}")
+            # Si no se encuentra la materia
+            raise ValueError(f"No se encontró la asignatura: {materia}")
+            
+    except Exception as e:
+        raise ValueError(f"Error al procesar los datos: {str(e)}")
+    

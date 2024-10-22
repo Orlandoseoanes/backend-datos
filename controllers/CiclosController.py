@@ -26,3 +26,4 @@ async def get_all_ciclos(ciclo: str):
     if not asignaturas:
         raise HTTPException(status_code=404, detail=f"No asignaturas found for ciclo '{ciclo}'.")
     return {"ciclo": ciclo, "asignaturas": asignaturas}
+

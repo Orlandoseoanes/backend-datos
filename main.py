@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,APIRouter
 from controllers import CSVcontroller, CiclosController, AsignaturasController,SemestreController
+router = APIRouter()
 
 app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
+
 
 app.include_router(CSVcontroller.router, prefix="/csv", tags=["CSV"])
 app.include_router(CiclosController.router, prefix="/ciclos", tags=["Ciclos"])
