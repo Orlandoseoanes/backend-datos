@@ -1,10 +1,13 @@
 from fastapi import FastAPI
-from controllers import CSVcontroller
+from controllers import CSVcontroller, CiclosController, AsignaturasController,SemestreController
 
 app = FastAPI()
 
-# Cambia esta línea
-app.include_router(CSVcontroller.router)
+app.include_router(CSVcontroller.router, prefix="/csv", tags=["CSV"])
+app.include_router(CiclosController.router, prefix="/ciclos", tags=["Ciclos"])
+app.include_router(AsignaturasController.router, prefix="/Asignaturas", tags=["Asignaturas"])
+app.include_router(SemestreController.router, prefix="/semestres", tags=["semestres"])
+
 
 if __name__ == "__main__":
     import uvicorn

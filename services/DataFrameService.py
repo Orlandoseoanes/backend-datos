@@ -1,88 +1,174 @@
-from pyspark.sql import SparkSession
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import regexp_replace, col
-from pyspark.sql.types import FloatType
+from entitys.general import materias_periodos,semestres,Ciclos
+from openpyxl import load_workbook
 import os
+from typing import List, Union
+import csv
 
-class DataFrameService:
-    _instance = None
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(DataFrameService, cls).__new__(cls)
-            cls._instance.spark = SparkSession.builder \
-                .appName("FastAPI_PySpark_DataAnalysis") \
-                .config("spark.jars.packages", "com.crealytics:spark-excel_2.12:0.13.7") \
-                .getOrCreate()
-            cls._instance.df = None
-        return cls._instance
+def process_excel_file(file_location: str):
+    # Cargar el archivo Excel
+    workbook = load_workbook(file_location)
+    sheet = workbook['Sistemas']  # Acceder a la hoja 'Sistemas'
 
-    def load_data(self, file_path: str):
-        """Loads the data into a DataFrame based on the file type."""
-        self._validate_file(file_path)
-        file_extension = os.path.splitext(file_path)[1].lower()
+    # Borrar todas las hojas excepto 'Sistemas'
+    sheet_names = workbook.sheetnames
+    for sheet_name in sheet_names:
+        if sheet_name != 'Sistemas':
+            std = workbook[sheet_name]
+            workbook.remove(std)
 
-        if file_extension == '.csv':
-            self._load_csv(file_path)
-        elif file_extension in ['.xls', '.xlsx']:
-            self._load_excel(file_path)
-        else:
-            raise ValueError(f"Unsupported file format: {file_extension}")
+    # Insertar dos nuevas columnas en la posición 1 (Columna A y B)
+    sheet.insert_cols(1)  # Para "Semestre"
+    sheet.insert_cols(1)  # Para "CICLO"
 
-        # Clean data after loading
-        self._clean_data()
+    # Agregar las nuevas columnas "Semestre" y "CICLO" en la fila 3
+    sheet.cell(row=3, column=1, value="CICLO")  # Columna A
+    sheet.cell(row=3, column=2, value="Semestre")  # Columna B
 
-    def _validate_file(self, file_path: str):
-        """Validates whether the file exists."""
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"The file {file_path} does not exist.")
+    # Llenar las columnas "Semestre" y "CICLO"
+    for row in range(4, sheet.max_row + 1):
+        asignatura = sheet.cell(row=row, column=3).value
+        semestre_found = False
+        ciclo_found = False
 
-    def _load_csv(self, file_path: str):
-        """Loads a CSV file into a DataFrame."""
-        self.df = self.spark.read \
-            .option("delimiter", ";") \
-            .option("header", True) \
-            .csv(file_path)
+        for ciclo, asignaturas in Ciclos.items():
+            if asignatura in asignaturas:
+                sheet.cell(row=row, column=1, value=ciclo)
+                ciclo_found = True
+                break
 
-    def _load_excel(self, file_path: str):
-        """Loads an Excel file into a DataFrame."""
-        self.df = self.spark.read \
-            .format("com.crealytics.spark.excel") \
-            .option("header", True) \
-            .option("inferSchema", True) \
-            .load(file_path)
+        if not ciclo_found:
+            sheet.cell(row=row, column=1, value="N/A")
 
-    def _clean_data(self):
-        """Cleans up data in the DataFrame, fixing number formats."""
-        if self.df is None:
-            raise ValueError("DataFrame has not been loaded yet.")
+        for semestre, asignaturas in materias_periodos.items():
+            if asignatura in asignaturas:
+                sheet.cell(row=row, column=2, value=semestre)
+                semestre_found = True
+                break
 
-        columns_to_fix = [col_name for col_name in self.df.columns if col_name not in ["ASIGNATURA", "CICLOS", "AREAS"]]
+        if not semestre_found:
+            sheet.cell(row=row, column=2, value="N/A")
 
-        for column in columns_to_fix:
-            self.df = self.df.withColumn(column, regexp_replace(col(column), "%", ""))
-            self.df = self.df.withColumn(column, regexp_replace(col(column), ",", "."))
-            self.df = self.df.withColumn(column, col(column).cast(FloatType()))
+    # Modificar la fila 3 con los valores del vector semestre
+    for col_index, semestre in enumerate(semestres, start=4):
+        sheet.cell(row=3, column=col_index, value=semestre)
 
-    def get_dataframe(self) -> DataFrame:
-        """Returns the loaded DataFrame."""
-        if self.df is None:
-            raise ValueError("DataFrame has not been loaded yet.")
-        return self.df
+    # Guardar el archivo modificado
+    workbook.save(file_location)
 
-    def analyze_data(self):
-        """Performs basic data analysis on the DataFrame."""
-        if self.df is None:
-            raise ValueError("DataFrame has not been loaded yet.")
+    # Convertir el archivo Excel a CSV con formato correcto para los ceros
+    csv_file_location = file_location.replace('.xlsx', '.csv')
+
+    with open(csv_file_location, mode='w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         
-        # Example analysis: Generating a summary of the data
-        summary = self.df.describe()
-        return summary
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True)):
+            formatted_row = []
+            for col_idx, cell in enumerate(row, start=1):
+                # Para las columnas 4-18 (datos numéricos)
+                if col_idx >= 4 and col_idx <= 18 and row_idx >= 3:  # Empezamos desde la fila 4 (índice 3)
+                    if isinstance(cell, (int, float)):
+                        # Multiplicar por 100 y redondear a 3 decimales
+                        value = cell * 100 if abs(cell) >= 1e-10 else 0
+                        formatted_value = round(value, 3)
+                    else:
+                        # Si no es número, intentar convertir
+                        try:
+                            if cell and str(cell).strip() != '':
+                                value = float(str(cell).replace('%', '')) * 100
+                                formatted_value = round(value, 3)
+                            else:
+                                formatted_value = 0
+                        except (ValueError, TypeError):
+                            formatted_value = cell
+                else:
+                    # Para las otras columnas (no numéricas)
+                    if isinstance(cell, (int, float)) and abs(cell) < 1e-10:
+                        formatted_value = 0
+                    else:
+                        formatted_value = cell
+                        
+                formatted_row.append(formatted_value)
+            writer.writerow(formatted_row)
+    
+    # Borrar el archivo .xlsx original
+    os.remove(file_location)
 
-    def save_dataframe(self, save_path: str):
-        """Saves the DataFrame to the specified path."""
-        if self.df is None:
-            raise ValueError("DataFrame has not been loaded yet.")
-        self.df.write.csv(save_path, header=True)
+    return csv_file_location
 
-data_frame_service = DataFrameService()
+
+def get_ciclo(asignatura: str):
+    """
+    Devuelve el ciclo correspondiente a una asignatura.
+    """
+    for ciclo, asignaturas in Ciclos.items():
+        if asignatura in asignaturas:
+            return ciclo
+    return "N/A"
+
+def get_asignaturas_por_ciclo(ciclo: str):
+    """
+    Devuelve las asignaturas correspondientes a un ciclo.
+    """
+    return Ciclos.get(ciclo, [])
+
+def get_asignaturas_por_semestre(semestre: str):
+    """
+    Devuelve las asignaturas correspondientes a un ciclo.
+    """
+    return materias_periodos.get(semestre, [])
+
+
+def get_data(materia: str, fecha_inicial: str, fecha_final: str, file_path: str) -> dict:
+        try:
+           
+            
+            # Validar fechas
+            if fecha_inicial not in semestres or fecha_final not in semestres:
+                raise ValueError("Las fechas deben estar en el rango permitido")
+            
+            if semestres.index(fecha_inicial) > semestres.index(fecha_final):
+                raise ValueError("La fecha inicial debe ser anterior a la fecha final")
+            
+            # Índices para el rango de fechas
+            inicio_idx = semestres.index(fecha_inicial) + 3  # +3 porque tenemos CICLO, Semestre, ASIGNATURA
+            final_idx = semestres.index(fecha_final) + 3
+            
+            # Leer el archivo CSV
+            with open(file_path, 'r', encoding='utf-8') as file:
+                csv_reader = csv.reader(file)
+                # Leer la primera fila para obtener los encabezados
+                headers = next(csv_reader)
+                
+                # Buscar la materia línea por línea
+                for row in csv_reader:
+                    if row[2] == materia:  # La asignatura está en la columna 3 (índice 2)
+                        # Extraer los datos del rango solicitado
+                        datos_rango = []
+                        for i in range(inicio_idx, final_idx + 1):
+                            try:
+                                # Convertir el valor a float, manejando casos especiales
+                                valor = row[i].strip()
+                                if valor == '' or valor == 'None':
+                                    datos_rango.append(0.0)
+                                else:
+                                    # Eliminar el símbolo de porcentaje si existe
+                                    valor = valor.replace('%', '').strip()
+                                    datos_rango.append(float(valor))
+                            except (ValueError, IndexError):
+                                datos_rango.append(0.0)
+                        
+                        # Construir respuesta con toda la información de la materia
+                        return {
+                            "ciclo": row[0],
+                            "semestre": row[1],
+                            "materia": row[2],
+                            "fechas": semestres[semestres.index(fecha_inicial):semestres.index(fecha_final) + 1],
+                            "datos": datos_rango
+                        }
+                
+                # Si no se encuentra la materia
+                raise ValueError(f"No se encontró la asignatura: {materia}")
+            
+        except Exception as e:
+            raise ValueError(f"Error al procesar los datos: {str(e)}")
