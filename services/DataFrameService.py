@@ -222,7 +222,6 @@ def get_data(materia: str, fecha_inicial: str, fecha_final: str, file_path: str)
         raise ValueError(f"Error al procesar los datos: {str(e)}")
     
 
-
 def get_tasa_mortandad(ciclo: str) -> list:
     try:
         # Listar archivos en el directorio 'uploads/'
@@ -310,4 +309,138 @@ def get_tasa_mortandad_areas(areas: str) -> list:
     except Exception as e:
         raise Exception(f"Error al procesar el archivo: {str(e)}")
 
-  
+
+#Generales
+
+def cargar_datos_csv(directorio: str) -> list:
+        try:
+            # Verificar que el directorio existe
+            if not os.path.exists(directorio):
+                raise HTTPException(
+                    status_code=404,
+                    detail="El directorio no existe"
+                )
+
+            # Obtener la lista de archivos en el directorio
+            archivos = [f for f in os.listdir(directorio) if os.path.isfile(os.path.join(directorio, f))]
+            
+            # Filtrar solo los archivos CSV
+            archivos_csv = [f for f in archivos if f.lower().endswith('.csv')]
+
+            if not archivos_csv:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No se encontró ningún archivo CSV en el directorio especificado."
+                )
+
+            # Tomar el primer archivo CSV
+            archivo_csv = archivos_csv[0]
+            ruta_csv = os.path.join(directorio, archivo_csv)
+
+            # Leer el archivo CSV
+            with open(ruta_csv, 'r', encoding='utf-8') as file:
+                csv_reader = csv.reader(file)
+                data = [row for row in csv_reader]
+                
+                if not data:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="El archivo CSV está vacío"
+                    )
+                    
+                return data
+
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al cargar el archivo CSV: {str(e)}"
+            )
+
+def obtener_tasas_mortalidad_mas_alta(data: list) -> list:
+        try:
+            # Los encabezados reales están en la línea 3 (índice 2)
+            header = data[2]
+            
+            # Lista de semestres a buscar
+            semestres = [
+                "2017-1", "2017-2", "2018-1", "2018-2", 
+                "2019-1", "2019-2", "2020-1", "2020-2", 
+                "2021-1", "2021-2", "2022-1", "2022-2", 
+                "2023-1", "2023-2", "2024-1"
+            ]
+            
+            # Encontrar índices de las columnas de semestres
+            indices_semestres = []
+            for semestre in semestres:
+                try:
+                    idx = header.index(semestre)
+                    indices_semestres.append((semestre, idx))
+                except ValueError:
+                    continue
+
+            if not indices_semestres:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No se encontraron columnas de semestres válidos en el CSV"
+                )
+
+            # Índices de las columnas importantes
+            try:
+                idx_ciclo = header.index("Ciclo")
+                idx_asignatura = header.index("ASIGNATURA")
+            except ValueError:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No se encontraron las columnas requeridas (Ciclo, ASIGNATURA)"
+                )
+
+            resultados = []
+            # Analizar cada semestre
+            for semestre, idx in indices_semestres:
+                max_tasa = -float('inf')
+                asignatura_max = ""
+                ciclo_max = ""
+                
+                # Comenzar desde la línea 4 (índice 3) para saltar los encabezados
+                for row in data[3:]:
+                    try:
+                        if len(row) > idx and row[idx] and row[idx].strip():
+                            tasa = float(row[idx])
+                            if tasa > max_tasa:
+                                max_tasa = tasa
+                                asignatura_max = row[idx_asignatura]
+                                ciclo_max = row[idx_ciclo]
+                    except (ValueError, IndexError):
+                        continue
+                
+                if asignatura_max and max_tasa > -float('inf'):
+                    resultado = {
+                        "semestre": semestre,
+                        "ciclo": ciclo_max,
+                        "asignatura": asignatura_max,
+                        "tasa_mortalidad": round(max_tasa, 3)
+                    }
+                    resultados.append(resultado)
+            
+            if not resultados:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No se encontraron tasas de mortalidad válidas"
+                )
+
+            return resultados
+
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error en el análisis de datos: {str(e)}"
+            )
+
+
+def cargar_y_analizar_datos(directorio: str) -> List[Dict[str, Union[str, float]]]:
+        data = cargar_datos_csv(directorio)
+        return obtener_tasas_mortalidad_mas_alta(data)
