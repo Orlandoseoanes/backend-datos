@@ -13,6 +13,12 @@ async def upload_file(file: UploadFile = File(...)):
     if not os.path.exists(UPLOAD_DIR):
         os.makedirs(UPLOAD_DIR)
 
+    # Elimina todos los archivos en el directorio de subida
+    for existing_file in os.listdir(UPLOAD_DIR):
+        file_path = os.path.join(UPLOAD_DIR, existing_file)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+
     file_location = os.path.join(UPLOAD_DIR, file.filename)
 
     try:
