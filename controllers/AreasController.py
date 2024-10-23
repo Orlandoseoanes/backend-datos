@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from services import DataFrameService
-from entitys.general import materias_periodos,semestres,Ciclos
+from entitys.general import Areas
 from typing import List, Dict, Optional
 
 router = APIRouter()
@@ -9,30 +9,34 @@ router = APIRouter()
 UPLOAD_DIR = "uploads/"
 
 
-@router.get("/", description="Este metodo devuelve todos los ciclos")
-async def get_ciclos():
-    return {"ciclos": list(Ciclos.keys())}
 
-@router.get("/{ciclo}", description="Este metodo devuelve todas las asginaturas de un ciclo especifico")
-async def get_all_ciclos(ciclo: str):
-    asignaturas = DataFrameService.get_asignaturas_por_ciclo(ciclo)
+@router.get("/", description="Este metodo devuelve todos las areas")
+async def get_areas():
+    return {"Areas": list(Areas.keys())}
+
+
+
+@router.get("/{areas}", description="Este metodo devuelve todas las asignaturas de un area especifica")
+async def get_all_areas(areas: str):
+    asignaturas = DataFrameService.get_asignaturas_por_area(areas)
     if not asignaturas:
-        raise HTTPException(status_code=404, detail=f"No asignaturas found for ciclo '{ciclo}'.")
-    return {"ciclo": ciclo, "asignaturas": asignaturas}
+        raise HTTPException(status_code=404, detail=f"No asignaturas found for ciclo '{areas}'.")
+    return {"areas": areas, "asignaturas": asignaturas}
 
 
-@router.get("/tasa-mortandad/{ciclo}", description="Este método devuelve la tasa de mortandad de todos los años de un ciclo específico.")
-async def get_tasa_mortandad(ciclo: str):
+
+@router.get("/tasa-mortandad/{areas}", description="Este método devuelve la tasa de mortandad de todos los años de un ciclo específico.")
+async def get_tasa_mortandad(areas: str):
     try:
-        data = DataFrameService.get_tasa_mortandad(ciclo)
+        data = DataFrameService.get_tasa_mortandad_areas(areas)
         
         if data is None:  # Verificamos específicamente si es None
             raise HTTPException(
                 status_code=404, 
-                detail=f"No se encontraron datos para el ciclo {ciclo}"  # Removido las comillas simples
+                detail=f"No se encontraron datos para el ciclo {areas}"  # Removido las comillas simples
             )
         
-        return {"ciclo": ciclo, "data": data}
+        return {"areas": areas, "data": data}
     
     except FileNotFoundError:
         raise HTTPException(
@@ -47,10 +51,10 @@ async def get_tasa_mortandad(ciclo: str):
             status_code=500, 
             detail=f"Error al procesar la solicitud: {str(e)}"
         )
-
-@router.get("/tasa-mortandad/{ciclo}/filtrada/{semestre1}/{semestre2}", 
-            description="Este método devuelve la tasa de mortandad de todos los años de un ciclo específico filtrada por dos semestres.")
-async def get_tasa_mortandad_filtrada(ciclo: str, semestre1: str, semestre2: str):
+    
+@router.get("/tasa-mortandad/{areas}/filtrada/{semestre1}/{semestre2}", 
+            description="Este método devuelve la tasa de mortandad de todos los años de un areas específico filtrada por dos semestres.")
+async def get_tasa_mortandad_filtrada(areas: str, semestre1: str, semestre2: str):
     # Lista de semestres válidos
     semestres_validos = [
         "2017-1", "2017-2", "2018-1", "2018-2", 
@@ -75,19 +79,19 @@ async def get_tasa_mortandad_filtrada(ciclo: str, semestre1: str, semestre2: str
 
     try:
         # Obtener los datos de la tasa de mortalidad
-        data = DataFrameService.get_tasa_mortandad(ciclo)
+        data = DataFrameService.get_tasa_mortandad_areas(areas)
 
         if data is None:  # Verificamos específicamente si es None
             raise HTTPException(
                 status_code=404, 
-                detail=f"No se encontraron datos para el ciclo {ciclo}"
+                detail=f"No se encontraron datos para el areas {areas}"
             )
 
         # Filtrar los datos según el rango de semestres
         filtered_data = []
         for row in data:
             filtered_row = {
-                "ciclo": ciclo,
+                "areas": areas,
                 "semestre": semestre1 + " a " + semestre2,
                 "area": "Ingenieria_Aplicada",  # Reemplaza esto según tus necesidades
                 "materia": row["Asignatura"],
@@ -109,7 +113,7 @@ async def get_tasa_mortandad_filtrada(ciclo: str, semestre1: str, semestre2: str
         if not filtered_data:
             raise HTTPException(
                 status_code=404,
-                detail=f"No se encontraron datos para el ciclo {ciclo} en el rango de semestres especificado"
+                detail=f"No se encontraron datos para el ciclo {areas} en el rango de semestres especificado"
             )
 
         return filtered_data  # Retorna la lista de datos filtrados
@@ -126,3 +130,6 @@ async def get_tasa_mortandad_filtrada(ciclo: str, semestre1: str, semestre2: str
             status_code=500, 
             detail=f"Error al procesar la solicitud: {str(e)}"
         )
+
+
+

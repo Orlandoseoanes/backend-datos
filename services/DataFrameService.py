@@ -1,8 +1,9 @@
 from entitys.general import materias_periodos,semestres,Ciclos,Areas
 from openpyxl import load_workbook
 import os
-from typing import List, Union
+from typing import List, Dict, Optional,Union
 import csv
+from fastapi import  HTTPException
 
 
 def process_excel_file(file_location: str):
@@ -220,3 +221,93 @@ def get_data(materia: str, fecha_inicial: str, fecha_final: str, file_path: str)
     except Exception as e:
         raise ValueError(f"Error al procesar los datos: {str(e)}")
     
+
+
+def get_tasa_mortandad(ciclo: str) -> list:
+    try:
+        # Listar archivos en el directorio 'uploads/'
+        directory = 'uploads/'
+        files = os.listdir(directory)
+        if not files:
+            raise FileNotFoundError("No se encontró ningún archivo en el directorio.")
+
+        # Asumir que hay solo un archivo en el directorio
+        file_path = os.path.join(directory, files[0])
+
+        # Leer el archivo CSV
+        with open(file_path, 'r', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
+            
+            # Saltar las dos primeras líneas de encabezado
+            next(csv_reader)  # Saltar "EVOLUCION ASIGNATURAS CON MAYOR TASA DE MORTALIDAD"
+            next(csv_reader)  # Saltar "INGENIERIA DE SISTEMAS"
+            
+            # Filtrar las filas que contienen el ciclo específico
+            filtered_rows = [row for row in csv_reader if ciclo in row]
+            
+            if not filtered_rows:
+                return None
+            
+            # Convertir las filas filtradas a una lista de diccionarios
+            keys = ["Ciclo", "Semestre", "Area", "Asignatura", "2017-1", "2017-2", "2018-1","2018-2", "2019-1", "2019-2", "2020-1", "2020-2","2021-1", "2021-2", "2022-1", "2022-2", "2023-1", "2023-2", "2024-1"]
+            result = [
+                {k: v for k, v in zip(keys, row) if k not in {"Ciclo", "Semestre", "Area"}}
+                for row in filtered_rows
+            ]
+            
+            return result
+    
+    except FileNotFoundError:
+        raise FileNotFoundError("Archivo no encontrado.")
+    except Exception as e:
+        raise Exception(f"Error al procesar el archivo: {str(e)}")
+
+#areas
+
+def get_asignaturas_por_area(area: str):
+    """
+    Devuelve las asignaturas correspondientes a un ciclo.
+    """
+    return Areas.get(area, [])
+
+
+def get_tasa_mortandad_areas(areas: str) -> list:
+    try:
+        # Listar archivos en el directorio 'uploads/'
+        directory = 'uploads/'
+        files = os.listdir(directory)
+        if not files:
+            raise FileNotFoundError("No se encontró ningún archivo en el directorio.")
+
+        # Asumir que hay solo un archivo en el directorio
+        file_path = os.path.join(directory, files[0])
+
+        # Leer el archivo CSV
+        with open(file_path, 'r', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
+            
+            # Saltar las dos primeras líneas de encabezado
+            next(csv_reader)  # Saltar "EVOLUCION ASIGNATURAS CON MAYOR TASA DE MORTALIDAD"
+            next(csv_reader)  # Saltar "INGENIERIA DE SISTEMAS"
+            
+            # Filtrar las filas que contienen el ciclo específico
+            filtered_rows = [row for row in csv_reader if areas in row]
+            
+            if not filtered_rows:
+                return None
+            
+            # Convertir las filas filtradas a una lista de diccionarios
+            keys = ["Ciclo", "Semestre", "Area", "Asignatura", "2017-1", "2017-2", "2018-1","2018-2", "2019-1", "2019-2", "2020-1", "2020-2","2021-1", "2021-2", "2022-1", "2022-2", "2023-1", "2023-2", "2024-1"]
+            result = [
+                {k: v for k, v in zip(keys, row) if k not in {"Ciclo", "Semestre", "Area"}}
+                for row in filtered_rows
+            ]
+            
+            return result
+    
+    except FileNotFoundError:
+        raise FileNotFoundError("Archivo no encontrado.")
+    except Exception as e:
+        raise Exception(f"Error al procesar el archivo: {str(e)}")
+
+  

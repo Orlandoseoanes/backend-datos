@@ -85,7 +85,7 @@ materias_periodos = {
         "ETICA PROFESIONAL",
         "PROYECTO DE GRADO II"
     ],
-    "semestre-desconocido": [
+    "Pensum Antiguo": [
         "DESAROLLO DE SOFTWARE EDUCATIVO",
         "COMUNICACION ORAL Y ESCRTA II",
         "ACT. CULTURAL Y DEPORTIVA I", 
@@ -228,7 +228,6 @@ materias_periodos = {
         "TELEMATICA II",
         "TEMAS AVANZADOS DE SOFTWARE II"
     ]
-
 }
 
 Ciclos = {
@@ -304,7 +303,7 @@ Ciclos = {
         "PROYECTO DE GRADO II",
         "SEGURIDAD INFORMATICA"
     ],
-    "Ciclo_desconocido": [
+    "Pensum Antiguo": [
         "BASICA EN INGENIERIA I",
         "BASICA EN INGENIERIA II",
         "BASICA EN INGENIERIA III",
@@ -572,7 +571,7 @@ Areas = {
         "SEMINARIO DE INVESTIGACION",
         "SEMINARIO INVESTIGACION"
     ],
-    "Formacion_Desconocida": [
+    "Pensum Antiguo": [
         "CIBERNETICA I",
         "CIBERNETICA II",
         "CIENCIAS DE LA COMPUTACION I",
@@ -641,7 +640,5 @@ Areas = {
         "TEMAS AVANZADOS DE SOFTWARE II"
     ]
 }
-
-
 
 semestres = ["2017-1", "2017-2", "2018-1","2018-2", "2019-1", "2019-2", "2020-1", "2020-2","2021-1", "2021-2", "2022-1", "2022-2", "2023-1", "2023-2", "2024-1"]
