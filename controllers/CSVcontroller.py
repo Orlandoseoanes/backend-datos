@@ -50,7 +50,7 @@ async def analizar_file():
         # Llamar a la función que procesa el archivo Excel
         DataFrameService.process_excel_file(file_location)
 
-        return {"message": f"All sheets except 'Sistemas' have been removed from '{file_name}', and new columns 'CICLO' and 'Semestre' have been added."}
+        return {"message": "Cargado exitosamente..."}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
