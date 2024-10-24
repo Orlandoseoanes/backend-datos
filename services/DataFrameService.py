@@ -222,6 +222,88 @@ def get_data(materia: str, fecha_inicial: str, fecha_final: str, file_path: str)
         raise ValueError(f"Error al procesar los datos: {str(e)}")
     
 
+
+
+#nuevo metodo aun no probado
+def get_all_subjects_data(file_path: str) -> list:
+    try:
+        materias_data = []
+        
+        # Leer el archivo CSV
+        with open(file_path, 'r', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
+            
+            # Saltar las dos primeras líneas de encabezado
+            next(csv_reader)  # Saltar "EVOLUCION ASIGNATURAS CON MAYOR TASA DE MORTALIDAD"
+            next(csv_reader)  # Saltar "INGENIERIA DE SISTEMAS"
+            
+            # Leer la línea de encabezados (tercera línea)
+            headers = next(csv_reader)
+            
+            # Obtener los índices de todas las fechas (semestres)
+            fechas_indices = []
+            fechas_headers = []
+            for i, header in enumerate(headers):
+                if header in semestres:
+                    fechas_indices.append(i)
+                    fechas_headers.append(header)
+            
+            # Procesar cada fila del archivo
+            for row in csv_reader:
+                if len(row) < 3:  # Saltar filas vacías o mal formadas
+                    continue
+                
+                # Extraer información básica
+                ciclo = row[0].strip()
+                semestre = row[1].strip() if len(row) > 1 else "semestre-desconocido"
+                area = row[2].strip() if len(row) > 2 else ""
+                
+                # Encontrar el nombre de la materia
+                materia = None
+                for campo in row:
+                    if campo.strip() and campo not in [ciclo, semestre, area]:
+                        materia = campo.strip()
+                        break
+                
+                if materia:
+                    # Extraer todas las notas disponibles
+                    datos_materia = []
+                    for idx in fechas_indices:
+                        try:
+                            if idx < len(row):
+                                valor = row[idx].strip()
+                                if valor == '' or valor == 'None':
+                                    datos_materia.append(0.0)
+                                else:
+                                    # Eliminar el símbolo de porcentaje si existe y convertir a float
+                                    valor = valor.replace('%', '').strip()
+                                    datos_materia.append(float(valor))
+                            else:
+                                datos_materia.append(0.0)
+                        except (ValueError, IndexError):
+                            datos_materia.append(0.0)
+                    
+                    # Construir el objeto de datos para esta materia
+                    materia_obj = {
+                        "ciclo": ciclo,
+                        "semestre": semestre,
+                        "area": area,
+                        "materia": materia,
+                        "fechas": fechas_headers,
+                        "datos": datos_materia
+                    }
+                    
+                    materias_data.append(materia_obj)
+            
+            if not materias_data:
+                raise ValueError("No se encontraron materias en el archivo")
+            
+            return materias_data
+            
+    except Exception as e:
+        raise ValueError(f"Error al procesar los datos: {str(e)}")
+
+#fin metodo
 def get_tasa_mortandad(ciclo: str) -> list:
     try:
         # Listar archivos en el directorio 'uploads/'

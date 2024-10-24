@@ -46,4 +46,26 @@ async def get_comparativa_materia(materia: str, fecha_inicial: str, fecha_final:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
-
+@router.get("/materias/all")
+async def get_all_materias():
+    try:
+        folder = 'uploads'
+        files = [f for f in os.listdir(folder) if f.endswith('.csv')]
+        
+        if len(files) != 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe haber exactamente un archivo CSV en la carpeta /uploads"
+            )
+        
+        file_path = os.path.join(folder, files[0])
+        
+        # Obtener los datos usando el servicio
+        result = DataFrameService.get_all_subjects_data(file_path)
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
