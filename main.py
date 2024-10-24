@@ -1,8 +1,20 @@
 from fastapi import FastAPI,APIRouter
 from controllers import CSVcontroller, CiclosController, AsignaturasController,SemestreController,AreasController,ConsultasGenerales
 router = APIRouter()
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+
+# Configura CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permite todos los orígenes
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos los métodos
+    allow_headers=["*"],  # Permite todos los encabezados
+)
+
 
 @app.get("/")
 def read_root():
