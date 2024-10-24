@@ -21,7 +21,7 @@ async def get_all_areas(areas: str):
     asignaturas = DataFrameService.get_asignaturas_por_area(areas)
     if not asignaturas:
         raise HTTPException(status_code=404, detail=f"No asignaturas found for ciclo '{areas}'.")
-    return {"areas": areas, "asignaturas": asignaturas}
+    return {"Areas": areas, "Subject_names": asignaturas}
 
 
 
@@ -36,7 +36,7 @@ async def get_tasa_mortandad(areas: str):
                 detail=f"No se encontraron datos para el ciclo {areas}"  # Removido las comillas simples
             )
         
-        return {"areas": areas, "data": data}
+        return {"Areas": areas, "Mortality_Rate": data}
     
     except FileNotFoundError:
         raise HTTPException(
@@ -91,9 +91,8 @@ async def get_tasa_mortandad_filtrada(areas: str, semestre1: str, semestre2: str
         filtered_data = []
         for row in data:
             filtered_row = {
-                "areas": areas,
+                "Areas": areas,
                 "semestre": semestre1 + " a " + semestre2,
-                "area": "Ingenieria_Aplicada",  # Reemplaza esto según tus necesidades
                 "materia": row["Asignatura"],
                 "fechas": [],
                 "datos": []

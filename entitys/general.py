@@ -231,7 +231,7 @@ materias_periodos = {
 }
 
 Ciclos = {
-    "Ciclo_basico_ingenieria": [
+    "C-INGENE": [
         "ACT. CULTURAL Y DEPORTIVA I",
         "ACT.CULTURAL Y DEPORTIVA II",
         "ACTIVIDAD CULTURAL",
@@ -264,7 +264,7 @@ Ciclos = {
         "PROGRAMACION DE COMPUTADORES I",
         "PROGRAMACION DE COMPUTADORES II"
     ],
-    "Ciclo_Profesional": [
+    "C-PROFES": [
         "ALGORITMOS Y FUNDAMENTOS DE PROGRAMACION",
         "ANALISIS NUMERICO",
         "ANALISIS Y DISEÑO DE SISTEMAS",
@@ -294,7 +294,7 @@ Ciclos = {
         "SISTEMAS OPERATIVOS",
         "ECUACIONES DIFERENCIALES"
     ],
-    "Ciclo_Profundizacion": [
+    "C-PROFUN": [
         "AUDITORIA DE SISTEMAS",
         "BASES DE DATOS II",
         "GESTION DE PROYECTOS DE TI",
@@ -435,7 +435,7 @@ Ciclos = {
 }
 
 Areas = {
-    "Area_Ciencias_Basicas": [
+    "ACIBA": [
         "ALGEBRA LINEAL",
         "CALCULO DIFERENCIAL",
         "CALCULO I",
@@ -459,7 +459,7 @@ Areas = {
         "MECANICA",
         "ONDAS"
     ],
-    "Area_Ciencias_Basicas_ingenieria": [
+    "ACBIN": [
         "ANALISIS NUMERICO",
         "BASICA EN INGENIERIA I",
         "BASICA EN INGENIERIA II",
@@ -470,7 +470,7 @@ Areas = {
         "ESTADISTICA Y PROBABILIDAD",
         "INGENIERIA ECONOMICA"
     ],
-    "Ingenieria_Aplicada": [
+    "INGAP": [
         "ALGORITMOS Y FUNDAMENTOS DE PROGRAMACION",
         "ANALISIS Y DISEÑO DE SISTEMAS",
         "ARQUITECTURA DE COMPUTADORES",
@@ -526,7 +526,7 @@ Areas = {
         "SISTEMAS OPERATIVOS",
         "SISTEMAS OPERATIVOS II"
     ],
-    "Formacion_Complementaria": [
+    "FORCO": [
         "ACT. CULTURAL Y DEPORTIVA I",
         "ACT.CULTURAL Y DEPORTIVA II",
         "ACTIVIDAD CULTURAL",
@@ -561,7 +561,7 @@ Areas = {
         "TECHNICAL ENGLISH II",
         "TECNICAS DE AUTOAPRENDIZAJE"
     ],
-    "Formacion_investigativa": [
+    "FORIN": [
         "METODOLOGIA DE INVESTIGACION",
         "METODOLOGIA DE LA INVESTIGACION",
         "PROYECTO DE GRADO",
